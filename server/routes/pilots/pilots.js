@@ -29,6 +29,14 @@ function pilotRequired(req, res, next) {
  */
 router.get('/dashboard', pilotRequired, async (req, res) => {
   const pilot = req.user;
+
+  if(!pilot.stripeAccountId){
+    return res.redirect('/pilots/signup');
+  }
+
+  let accDetails = await stripe.accounts.retrieve(pilot.stripeAccountId);
+  console.log("accDetails => ", JSON.stringify(accDetails, null, 2));
+
   // Retrieve the balance from Stripe
   const balance = await stripe.balance.retrieve({
     stripe_account: pilot.stripeAccountId,
@@ -147,7 +155,7 @@ router.post('/signup', async (req, res, next) => {
     try {
       // Try to create and save a new pilot
       pilot = new Pilot(body);
-      pilot = await pilot.save()
+      pilot = await pilot.save();
       // Sign in and redirect to continue the signup process
       req.logIn(pilot, err => {
         if (err) next(err);
@@ -164,7 +172,12 @@ router.post('/signup', async (req, res, next) => {
       // Try to update the logged-in pilot using the newly entered profile data
       pilot.set(body);
       await pilot.save();
-      return res.redirect('/pilots/stripe/authorize');
+
+      if(body.connectType){
+        return res.redirect(`/pilots/stripe/authorize?connectType=${getConnectType(body.connectType)}`);
+      } else {
+        return res.redirect('/');
+      }
     } catch (err) {
       next(err);
     }
@@ -255,6 +268,14 @@ function getTestSource(behavior) {
 // Return a random int between two numbers
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getConnectType(str){
+  if(str === 'Save and Express Connect'){
+    return 'express';
+  } else {
+    return 'standard';
+  }
 }
 
 module.exports = router;

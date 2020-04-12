@@ -29,7 +29,20 @@ router.get('/authorize', pilotRequired, (req, res) => {
   let parameters = {
     client_id: config.stripe.clientId,
     state: req.session.state,
+    response_type: 'code',
+    scope: 'read_write',
+    always_prompt: true
   };
+
+  let authorizeUri;
+  if(req.query.connectType === 'express'){
+    authorizeUri = config.stripe.authorizeUri;
+  } else {
+    authorizeUri = config.stripe.authorizeUriStandard;
+  }
+
+  console.log("***** req.query => ", req.query);
+
   // Optionally, the Express onboarding flow accepts `first_name`, `last_name`, `email`,
   // and `phone` in the query parameters: those form fields will be prefilled
   parameters = Object.assign(parameters, {
@@ -51,7 +64,7 @@ router.get('/authorize', pilotRequired, (req, res) => {
   console.log('Starting Express flow:', parameters);
   // Redirect to Stripe to start the Express onboarding flow
   res.redirect(
-    config.stripe.authorizeUri + '?' + querystring.stringify(parameters)
+    authorizeUri + '?' + querystring.stringify(parameters)
   );
 });
 
@@ -62,9 +75,16 @@ router.get('/authorize', pilotRequired, (req, res) => {
  */
 router.get('/token', pilotRequired, async (req, res, next) => {
   // Check the `state` we got back equals the one we generated before proceeding (to protect from CSRF)
-  if (req.session.state != req.query.state) {
+  if (req.session.state !== req.query.state) {
     return res.redirect('/pilots/signup');
   }
+
+  if(req.query.error){
+    console.log("error => ", req.query.error);
+    console.log("error_description => ", req.query.error_description);
+    return res.redirect('/pilots/signup');
+  }
+
   try {
     // Post the authorization code to Stripe to complete the Express onboarding flow
     const expressAuthorized = await request.post({
@@ -104,6 +124,9 @@ router.get('/token', pilotRequired, async (req, res, next) => {
 router.get('/dashboard', pilotRequired, async (req, res) => {
   const pilot = req.user;
   // Make sure the logged-in pilot completed the Express onboarding
+
+  console.log("pilot: ", pilot);
+
   if (!pilot.stripeAccountId) {
     return res.redirect('/pilots/signup');
   }
