@@ -85,6 +85,19 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
     } else if (req.body.payout_limit) {
       source = getTestSource('payout_limit');
     }
+
+    let transfer_data = {
+      // Send the amount for the pilot after collecting a 20% platform fee:
+      // the `amountForPilot` method simply computes `ride.amount * 0.8`
+      amount: ride.amountForPilot(),
+      // The destination of this charge is the pilot's Stripe account
+      destination: pilot.stripeAccountId
+    };
+
+    if(pilot.country !== 'US'){
+      Object.assign(transfer_data, {on_behalf_of: pilot.stripeAccountId})
+    }
+
     // Create a charge and set its destination to the pilot's account
     const charge = await stripe.charges.create({
       source: source,
@@ -93,13 +106,7 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       description: config.appName,
       statement_descriptor: config.appName,
       // The destination parameter directs the transfer of funds from platform to pilot
-      transfer_data: {
-        // Send the amount for the pilot after collecting a 20% platform fee:
-        // the `amountForPilot` method simply computes `ride.amount * 0.8`
-        amount: ride.amountForPilot(),
-        // The destination of this charge is the pilot's Stripe account
-        destination: pilot.stripeAccountId,
-      },
+      transfer_data: transfer_data
     });
     // Add the Stripe charge reference to the ride and save it
     ride.stripeChargeId = charge.id;
