@@ -47,7 +47,7 @@ router.get('/dashboard', pilotRequired, async (req, res) => {
     return a + b.amountForPilot();
   }, 0);
   const [showBanner] = req.flash('showBanner');
-  // There is one balance for each currencies used: as this 
+  // There is one balance for each currencies used: as this
   // demo app only uses USD we'll just use the first object
   res.render('dashboard', {
     pilot: pilot,
@@ -72,8 +72,9 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
   const ride = new Ride({
     pilot: pilot.id,
     passenger: passenger.id,
-    // Generate a random amount between $10 and $100 for this ride
-    amount: getRandomInt(1000, 10000),
+    // Amount has to be created in cents
+    amount: Number(req.body.amount) * 100,
+    currency: req.body.currency
   });
   // Save the ride
   await ride.save();
@@ -86,28 +87,27 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       source = getTestSource('payout_limit');
     }
 
-    let chargeParams = {
+    let paymentData = {
       source: source,
       amount: ride.amount,
       currency: ride.currency,
       description: config.appName,
-      statement_descriptor: config.appName,
+      statement_descriptor: config.appName
+    };
+    if (req.body.chargeType === 'Destination Charge'){
+      paymentData.on_behalf_of = pilot.stripeAccountId;
       // The destination parameter directs the transfer of funds from platform to pilot
-      transfer_data: {
+      paymentData.transfer_data = {
         // Send the amount for the pilot after collecting a 20% platform fee:
         // the `amountForPilot` method simply computes `ride.amount * 0.8`
         amount: ride.amountForPilot(),
         // The destination of this charge is the pilot's Stripe account
         destination: pilot.stripeAccountId
       }
-    };
-
-    if(pilot.country !== 'US'){
-      Object.assign(chargeParams, {on_behalf_of: pilot.stripeAccountId})
     }
 
     // Create a charge and set its destination to the pilot's account
-    const charge = await stripe.charges.create(chargeParams);
+    const charge = await stripe.charges.create(paymentData);
     // Add the Stripe charge reference to the ride and save it
     ride.stripeChargeId = charge.id;
     ride.save();
@@ -173,7 +173,7 @@ router.post('/signup', async (req, res, next) => {
       const errors = Object.keys(err.errors).map(field => err.errors[field].message);
       res.render('signup', { step: 'account', error: errors[0] });
     }
-  } 
+  }
   else {
     try {
       // Try to update the logged-in pilot using the newly entered profile data

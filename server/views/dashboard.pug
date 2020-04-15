@@ -4,7 +4,7 @@ block header
   if showBanner
     .banner
       .message
-        strong Congratulations, your account is set up. 
+        strong Congratulations, your account is set up.
         span.secondary-text Fire up your rocket and take your first passengers.
 block content
   .dashboard
@@ -38,15 +38,16 @@ block content
           h2 Fly with some passengers!
       else
         .list
+          - const currencySymbolMap = {'USD': '$', 'AUD': 'AU$', 'EUR': '€', 'GBP': '£', HKD: 'HK$', 'usd': '$'}
           each ride in rides
             .row
               .cell.name= ride.passenger.displayName()
               .cell.date= moment(new Date(Date.parse(ride.created))).calendar()
-              .cell.price $#{(ride.amountForPilot() / 100).toFixed(2)}
+              .cell.price #{currencySymbolMap[ride.currency]}#{(ride.amountForPilot() / 100).toFixed(2)}
 
 block footer
   .annotation.card.dashboard-banner(class=(showBanner ? '' : 'hidden'))
-    h4 The Connect Express onboarding flow is now complete. 
+    h4 The Connect Express onboarding flow is now complete.
       a.show-more(href="#") &nbsp;(show more)
     .description
       p Express includes the #[strong Stripe account ID] that was just created, so after the flow redirects to Rocket Rides we can save it to the database.
@@ -61,5 +62,23 @@ block footer
         li The balance is automatically fetched from the Stripe API.
         li #[strong View payouts on Stripe] lets pilots see their payouts or edit their account information.
         li #[strong Pay out now] uses the Stripe API to #[a(href="https://stripe.com/docs/connect/payouts#instant-payouts" target="_blank") generate a payout] of the available balance. #[a(href="https://stripe.com/docs/connect/payouts#instant-payouts" target="_blank") Instant Payouts] are available with a debit card.
-    form.right(action='/pilots/rides', method='POST', autocomplete='off')
+    form.left(action='/pilots/rides', method='POST', autocomplete='off')
+      p
+        | Amount:
+        input(name='amount', value='', type='text')
+        <br/>
+        <br/>
+        label(for='currency') Currency:
+          - const currencyOptions = [{value: 'USD'}, {value: 'EUR'}, {value: 'GBP'}, {value: 'AUD'}, {value: 'HKD'}]
+          select#currency(name='currency' size='1')
+            each currency in currencyOptions
+              option(value=(currency.value)) #{currency.value}
+        <br/>
+        <br/>
+        label(for='chargeType') Charge Type:
+          - const chargeTypeOptions = [{value: 'Destination Charge'}, {value: 'Direct Charge'}]
+          select#chargeType(name='chargeType' size='1')
+            each chargeType in chargeTypeOptions
+              option(value=(chargeType.value)) #{chargeType.value}
+      <br/>
       input(type='submit', name="immediate_balance", value='Create passenger ride', class='primary-action')
