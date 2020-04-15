@@ -35,13 +35,14 @@ router.get('/authorize', pilotRequired, (req, res) => {
   };
 
   let authorizeUri;
-  if(req.query.connectType === 'express'){
+  if(!req.query.connectType || req.query.connectType === 'express'){
     authorizeUri = config.stripe.authorizeUri;
   } else {
     authorizeUri = config.stripe.authorizeUriStandard;
   }
 
   console.log("***** req.query => ", req.query);
+  console.log("***** authorizeUri => ", authorizeUri);
 
   // Optionally, the Express onboarding flow accepts `first_name`, `last_name`, `email`,
   // and `phone` in the query parameters: those form fields will be prefilled

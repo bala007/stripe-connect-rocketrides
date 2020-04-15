@@ -92,7 +92,8 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       amount: ride.amount,
       currency: ride.currency,
       description: config.appName,
-      statement_descriptor: config.appName
+      statement_descriptor: config.appName,
+      application_fee_amount: (ride.amount - ride.amountForPilot())
     };
     let charge = null;
     if (req.body.chargeType === 'Destination Charge'){
@@ -101,7 +102,7 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       paymentData.transfer_data = {
         // Send the amount for the pilot after collecting a 20% platform fee:
         // the `amountForPilot` method simply computes `ride.amount * 0.8`
-        amount: ride.amountForPilot(),
+        // amount: ride.amountForPilot(),
         // The destination of this charge is the pilot's Stripe account
         destination: pilot.stripeAccountId
       };
