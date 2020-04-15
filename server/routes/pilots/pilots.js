@@ -104,6 +104,8 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
         // The destination of this charge is the pilot's Stripe account
         destination: pilot.stripeAccountId
       }
+    } else if (req.body.chargeType === 'Direct Charge'){
+      paymentData.stripe_account = pilot.stripeAccountId;
     }
 
     // Create a charge and set its destination to the pilot's account
