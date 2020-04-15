@@ -94,6 +94,7 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       description: config.appName,
       statement_descriptor: config.appName
     };
+    let charge = null;
     if (req.body.chargeType === 'Destination Charge'){
       paymentData.on_behalf_of = pilot.stripeAccountId;
       // The destination parameter directs the transfer of funds from platform to pilot
@@ -103,13 +104,12 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
         amount: ride.amountForPilot(),
         // The destination of this charge is the pilot's Stripe account
         destination: pilot.stripeAccountId
-      }
+      };
+      charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Direct Charge'){
-      paymentData.stripe_account = pilot.stripeAccountId;
+      charge = await stripe.charges.create(paymentData, {stripe_account: pilot.stripeAccountId});
     }
 
-    // Create a charge and set its destination to the pilot's account
-    const charge = await stripe.charges.create(paymentData);
     // Add the Stripe charge reference to the ride and save it
     ride.stripeChargeId = charge.id;
     ride.save();
