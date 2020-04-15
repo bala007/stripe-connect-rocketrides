@@ -64,18 +64,16 @@ block footer
         li #[strong Pay out now] uses the Stripe API to #[a(href="https://stripe.com/docs/connect/payouts#instant-payouts" target="_blank") generate a payout] of the available balance. #[a(href="https://stripe.com/docs/connect/payouts#instant-payouts" target="_blank") Instant Payouts] are available with a debit card.
     form.left(action='/pilots/rides', method='POST', autocomplete='off')
       p
-        | Amount:
+        | Amount:&nbsp;
         input(name='amount', value='', type='text')
         <br/>
-        <br/>
-        label(for='currency') Currency:
+        label(for='currency') Currency:&nbsp;
           - const currencyOptions = [{value: 'USD'}, {value: 'EUR'}, {value: 'GBP'}, {value: 'AUD'}, {value: 'HKD'}]
           select#currency(name='currency' size='1')
             each currency in currencyOptions
               option(value=(currency.value)) #{currency.value}
         <br/>
-        <br/>
-        label(for='chargeType') Charge Type:
+        label(for='chargeType') Charge Type:&nbsp;
           - const chargeTypeOptions = [{value: 'Destination Charge'}, {value: 'Direct Charge'}]
           select#chargeType(name='chargeType' size='1')
             each chargeType in chargeTypeOptions
