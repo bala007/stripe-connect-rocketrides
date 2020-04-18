@@ -24,8 +24,8 @@ const RideSchema = new Schema({
 });
 
 // Return the ride amount for the pilot after collecting 20% platform fees.
-RideSchema.methods.amountForPilot = function() {
-  return parseInt(this.amount - this.meetlyFee() - this.stripeFee());
+RideSchema.methods.amountForPilot = function(country) {
+  return parseInt(this.amount - this.meetlyFee() - this.stripeFee(country));
 };
 
 // Return the ride amount for the pilot after collecting 20% platform fees.
@@ -33,10 +33,10 @@ RideSchema.methods.meetlyFee = function() {
   return parseInt(this.amount * 0.08);
 };
 
-RideSchema.methods.stripeFee = function() {
+RideSchema.methods.stripeFee = function(country) {
   let fixedalue = 0.3;
   let perValue = 0.029;
-  if(this.currency === 'hkd'){
+  if(country === 'HK'){
     fixedalue = 2.35;
     perValue = 0.034;
   }

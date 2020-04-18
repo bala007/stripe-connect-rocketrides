@@ -44,7 +44,7 @@ router.get('/dashboard', pilotRequired, async (req, res) => {
   // Fetch the pilot's recent rides
   const rides = await pilot.listRecentRides();
   const ridesTotalAmount = rides.reduce((a, b) => {
-    return a + b.amountForPilot();
+    return a + b.amountForPilot(pilot.country);
   }, 0);
   const [showBanner] = req.flash('showBanner');
   // There is one balance for each currencies used: as this
@@ -87,11 +87,12 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
     }
 
     let meetlyFees = ride.meetlyFee();
-    let stripeFee = ride.stripeFee();
+    let stripeFee = ride.stripeFee(pilot.country);
     let metaData = {"Meetly Fee": `${meetlyFees/100}`, "Stripe Fee": `${stripeFee/100}`};
 
     console.log("meetlyFees: ", meetlyFees);
     console.log("stripeFee: ", stripeFee);
+    console.log("pilot: ", pilot);
 
 
     let paymentData = {
@@ -106,15 +107,15 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
     if (req.body.chargeType === 'Platform') {
       charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Destination Charge'){
-      if (req.body.applicationFees === 'Yes'){
-        paymentData.application_fee_amount = (ride.amount - ride.amountForPilot());
-      }
+      // if (req.body.applicationFees === 'Yes'){
+      //   paymentData.application_fee_amount = (ride.amount - ride.amountForPilot());
+      // }
       paymentData.on_behalf_of = pilot.stripeAccountId;
       // The destination parameter directs the transfer of funds from platform to pilot
       paymentData.transfer_data = {
         // Send the amount for the pilot after collecting a 20% platform fee:
         // the `amountForPilot` method simply computes `ride.amount * 0.8`
-        amount: ride.amountForPilot(),
+        amount: ride.amountForPilot(pilot.country),
         // The destination of this charge is the pilot's Stripe account
         destination: pilot.stripeAccountId
 
