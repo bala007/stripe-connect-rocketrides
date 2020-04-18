@@ -25,7 +25,16 @@ const RideSchema = new Schema({
 
 // Return the ride amount for the pilot after collecting 20% platform fees.
 RideSchema.methods.amountForPilot = function() {
-  return parseInt(this.amount * 0.92);
+  return parseInt(this.amount - this.meetlyFee() - this.stripeFee());
+};
+
+// Return the ride amount for the pilot after collecting 20% platform fees.
+RideSchema.methods.meetlyFee = function() {
+  return parseInt(this.amount * 0.08);
+};
+
+RideSchema.methods.stripeFee = function() {
+  return parseInt(((this.amount*0.029) + 0.3*100));
 };
 
 const Ride = mongoose.model('Ride', RideSchema);

@@ -86,20 +86,27 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       source = getTestSource('payout_limit');
     }
 
-    let meetly_fees = (ride.amount - ride.amountForPilot());
+    let meetlyFees = ride.meetlyFee();
+    let stripeFee = ride.stripeFee();
+    let metaData = {"Meetly Fee": meetlyFees/100, "Stripe Fee": stripeFee/100};
+
+    console.log("meetlyFees: ", meetlyFees);
+    console.log("stripeFee: ", stripeFee);
+
+
     let paymentData = {
       source: source,
       amount: ride.amount,
       currency: ride.currency,
       description: config.appName,
       statement_descriptor: config.appName,
-      metadata: {meetly_fees: meetly_fees, stripe_fees: ((ride.amount*0.29) + 0.3)}
+      metadata: metaData
     };
     let charge = null;
     if (req.body.chargeType === 'Platform') {
       charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Destination Charge'){
-      if (req.body.applicationFees == 'Yes'){
+      if (req.body.applicationFees === 'Yes'){
         paymentData.application_fee_amount = (ride.amount - ride.amountForPilot());
       }
       paymentData.on_behalf_of = pilot.stripeAccountId;
@@ -109,12 +116,14 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
         // the `amountForPilot` method simply computes `ride.amount * 0.8`
         amount: ride.amountForPilot(),
         // The destination of this charge is the pilot's Stripe account
-        destination: pilot.stripeAccountId
+        destination: pilot.stripeAccountId,
+        metadata: metaData
+
       };
       charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Direct Charge'){
-      if (req.body.applicationFees == 'Yes'){
-        paymentData.application_fee_amount = meetly_fees;
+      if (req.body.applicationFees === 'Yes'){
+        paymentData.application_fee_amount = meetlyFees;
       }
       charge = await stripe.charges.create(paymentData, {stripe_account: pilot.stripeAccountId});
     }
