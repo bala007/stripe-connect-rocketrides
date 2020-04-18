@@ -107,19 +107,25 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
     if (req.body.chargeType === 'Platform') {
       charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Destination Charge'){
-      // if (req.body.applicationFees === 'Yes'){
-      //   paymentData.application_fee_amount = (ride.amount - ride.amountForPilot());
-      // }
-      paymentData.on_behalf_of = pilot.stripeAccountId;
-      // The destination parameter directs the transfer of funds from platform to pilot
-      paymentData.transfer_data = {
-        // Send the amount for the pilot after collecting a 20% platform fee:
-        // the `amountForPilot` method simply computes `ride.amount * 0.8`
-        amount: ride.amountForPilot(pilot.country),
-        // The destination of this charge is the pilot's Stripe account
-        destination: pilot.stripeAccountId
+      if (req.body.applicationFees === 'Yes'){
+        paymentData.application_fee_amount = ride.applicationFee();
+        paymentData.transfer_data = {
+          // The destination of this charge is the pilot's Stripe account
+          destination: pilot.stripeAccountId
 
-      };
+        };
+      } else {
+        // The destination parameter directs the transfer of funds from platform to pilot
+        paymentData.transfer_data = {
+          // Send the amount for the pilot after collecting a 20% platform fee:
+          // the `amountForPilot` method simply computes `ride.amount * 0.8`
+          amount: ride.amountForPilot(pilot.country),
+          // The destination of this charge is the pilot's Stripe account
+          destination: pilot.stripeAccountId
+
+        };
+      }
+      paymentData.on_behalf_of = pilot.stripeAccountId;
       charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Direct Charge'){
       if (req.body.applicationFees === 'Yes'){

@@ -43,6 +43,10 @@ RideSchema.methods.stripeFee = function(country) {
   return parseInt(((this.amount*perValue) + fixedalue*100));
 };
 
+RideSchema.methods.applicationFee = function() {
+  return parseInt(this.amount*0.2);
+};
+
 const Ride = mongoose.model('Ride', RideSchema);
 
 module.exports = Ride;
