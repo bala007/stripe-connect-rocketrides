@@ -116,8 +116,7 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
         // the `amountForPilot` method simply computes `ride.amount * 0.8`
         amount: ride.amountForPilot(),
         // The destination of this charge is the pilot's Stripe account
-        destination: pilot.stripeAccountId,
-        metadata: metaData
+        destination: pilot.stripeAccountId
 
       };
       charge = await stripe.charges.create(paymentData);
