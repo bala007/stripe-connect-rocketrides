@@ -7,6 +7,7 @@ block header
         strong Congratulations, your account is set up.
         span.secondary-text Fire up your rocket and take your first passengers.
 block content
+  - const currencyOptions = [{value: 'USD'}, {value: 'EUR'}, {value: 'GBP'}, {value: 'AUD'}, {value: 'HKD'}]
   .dashboard
     .user
       .block.profile
@@ -29,6 +30,16 @@ block content
           input(class='primary' type='submit', value='Pay out now' disabled=(balanceAvailable===0))
         p
           a(href='/pilots/stripe/dashboard') View payouts on Stripe
+        form.left(action='/pilots/transfer-to-platform', method='POST', autocomplete='off')
+          p
+            | Application Fees:&nbsp;
+            input(name='application_fees', value='', type='text')
+            label(for='application_fees_currency') Currency:&nbsp;
+              select#currency(name='application_fees_currency' size='1')
+                each currency in currencyOptions
+                  option(value=(currency.value)) #{currency.value}
+          <br/>
+          input(type='submit', name="push_funds", value='Pay Application fees to Platform', class='primary-action')
     section.rides
       h4 Recent rides
       if rides.length == 0
@@ -68,15 +79,32 @@ block footer
         input(name='amount', value='', type='text')
         <br/>
         label(for='currency') Currency:&nbsp;
-          - const currencyOptions = [{value: 'USD'}, {value: 'EUR'}, {value: 'GBP'}, {value: 'AUD'}, {value: 'HKD'}]
           select#currency(name='currency' size='1')
             each currency in currencyOptions
               option(value=(currency.value)) #{currency.value}
         <br/>
-        label(for='chargeType') Charge Type:&nbsp;
-          - const chargeTypeOptions = [{value: 'Destination Charge'}, {value: 'Direct Charge'}]
+        label(for='chargeType') Transfer amount:&nbsp;
+          - const chargeTypeOptions = [{value: 'Platform', display: 'Direct to Platform'}, {value: 'Destination Charge', display: 'Destination to Pilot via Platform'}, {value: 'Direct Charge', display: 'Direct to Pilot'}]
           select#chargeType(name='chargeType' size='1')
             each chargeType in chargeTypeOptions
-              option(value=(chargeType.value)) #{chargeType.value}
+              option(value=(chargeType.value)) #{chargeType.display}
+        <br/>
+        label(for='applicationFees') Application Fees:&nbsp;
+          - const applicationFeesOptions = [{value: 'No'}, {value: 'Yes'}]
+          select#applicationFees(name='applicationFees' size='1')
+            each applicationFees in applicationFeesOptions
+              option(value=(applicationFees.value)) #{applicationFees.value}
       <br/>
       input(type='submit', name="immediate_balance", value='Create passenger ride', class='primary-action')
+    <br/>
+    h4 Simulate a payment from Platform.
+      a.show-more(href="#") &nbsp;(show more)
+    .description
+      ol
+        li This will help you to pull remaining payments from platform.
+    form.left(action='/pilots/pull-funds', method='POST', autocomplete='off')
+      p
+        | Amount:&nbsp;
+        input(name='pull_amount', value='', type='text')
+      <br/>
+      input(type='submit', name="pull_funds", value='Pull Funds From Platform', class='primary-action')

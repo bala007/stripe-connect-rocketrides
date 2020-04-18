@@ -16,6 +16,7 @@ const RideSchema = new Schema({
   dropoffTime: { type: Date, default: new Date((new Date).getTime() + Math.floor(10 * Math.random()) * 60000) },
   amount: Number,
   currency: { type: String, default: 'usd' },
+  chargeType: { type: String },
   created: { type: Date, default: Date.now },
 
   // Stripe Payment Intent ID corresponding to this ride.
@@ -24,7 +25,7 @@ const RideSchema = new Schema({
 
 // Return the ride amount for the pilot after collecting 20% platform fees.
 RideSchema.methods.amountForPilot = function() {
-  return parseInt(this.amount * 0.8);
+  return parseInt(this.amount * 0.92);
 };
 
 const Ride = mongoose.model('Ride', RideSchema);

@@ -74,10 +74,9 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
     passenger: passenger.id,
     // Amount has to be created in cents
     amount: Number(req.body.amount) * 100,
-    currency: req.body.currency
+    currency: req.body.currency,
+    chargeType: req.body.chargeType
   });
-  // Save the ride
-  await ride.save();
   try {
     // Get a test source, using the given testing behavior
     let source;
@@ -87,33 +86,89 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       source = getTestSource('payout_limit');
     }
 
+    let meetly_fees = (ride.amount - ride.amountForPilot());
     let paymentData = {
       source: source,
       amount: ride.amount,
       currency: ride.currency,
       description: config.appName,
       statement_descriptor: config.appName,
-      application_fee_amount: (ride.amount - ride.amountForPilot())
+      metadata: {meetly_fees: meetly_fees, stripe_fees: ((ride.amount*0.29) + 0.3)}
     };
     let charge = null;
-    if (req.body.chargeType === 'Destination Charge'){
+    if (req.body.chargeType === 'Platform') {
+      charge = await stripe.charges.create(paymentData);
+    } else if (req.body.chargeType === 'Destination Charge'){
+      if (req.body.applicationFees == 'Yes'){
+        paymentData.application_fee_amount = (ride.amount - ride.amountForPilot());
+      }
       paymentData.on_behalf_of = pilot.stripeAccountId;
       // The destination parameter directs the transfer of funds from platform to pilot
       paymentData.transfer_data = {
         // Send the amount for the pilot after collecting a 20% platform fee:
         // the `amountForPilot` method simply computes `ride.amount * 0.8`
-        // amount: ride.amountForPilot(),
+        amount: ride.amountForPilot(),
         // The destination of this charge is the pilot's Stripe account
         destination: pilot.stripeAccountId
       };
       charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Direct Charge'){
+      if (req.body.applicationFees == 'Yes'){
+        paymentData.application_fee_amount = meetly_fees;
+      }
       charge = await stripe.charges.create(paymentData, {stripe_account: pilot.stripeAccountId});
     }
 
     // Add the Stripe charge reference to the ride and save it
     ride.stripeChargeId = charge.id;
-    ride.save();
+    // Save the ride
+    await ride.save();
+  } catch (err) {
+    console.log(err);
+    // Return a 402 Payment Required error code
+    res.sendStatus(402);
+    next(`Error adding token to customer: ${err.message}`);
+  }
+  res.redirect('/pilots/dashboard');
+});
+
+/**
+ * POST /pilots/pull-funds
+ *
+ * Pull funds from platform to pilot's account
+ */
+router.post('/pull-funds', pilotRequired, async (req, res, next) => {
+  const pilot = req.user;
+  try {
+    const transfer = await stripe.transfers.create({
+      amount: Number(req.body.pull_amount) * 100,
+      currency: 'usd',
+      destination: pilot.stripeAccountId
+    })
+  } catch (err) {
+    console.log(err);
+    // Return a 402 Payment Required error code
+    res.sendStatus(402);
+    next(`Error adding token to customer: ${err.message}`);
+  }
+  res.redirect('/pilots/dashboard');
+});
+
+/**
+ * POST /pilots/pull-funds
+ *
+ * Pull funds from platform to pilot's account
+ */
+router.post('/transfer-to-platform', pilotRequired, async (req, res, next) => {
+  const pilot = req.user;
+  console.log("pilot.stripeAccountId: "+ pilot.stripeAccountId);
+  console.log('req.body: ', req.body);
+  try {
+    const transfer = await stripe.charges.create({
+      amount: Number(req.body.application_fees) * 100,
+      currency: req.body.application_fees_currency,
+      source: pilot.stripeAccountId
+    })
   } catch (err) {
     console.log(err);
     // Return a 402 Payment Required error code
