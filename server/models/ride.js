@@ -34,7 +34,13 @@ RideSchema.methods.meetlyFee = function() {
 };
 
 RideSchema.methods.stripeFee = function() {
-  return parseInt(((this.amount*0.029) + 0.3*100));
+  let fixedalue = 0.3;
+  let perValue = 0.029;
+  if(this.currency === 'hkd'){
+    fixedalue = 2.35;
+    perValue = 0.034;
+  }
+  return parseInt(((this.amount*perValue) + fixedalue*100));
 };
 
 const Ride = mongoose.model('Ride', RideSchema);

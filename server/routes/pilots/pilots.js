@@ -88,7 +88,7 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
 
     let meetlyFees = ride.meetlyFee();
     let stripeFee = ride.stripeFee();
-    let metaData = {"Meetly Fee": meetlyFees/100, "Stripe Fee": stripeFee/100};
+    let metaData = {"Meetly Fee": `${meetlyFees/100}`, "Stripe Fee": `${stripeFee/100}`};
 
     console.log("meetlyFees: ", meetlyFees);
     console.log("stripeFee: ", stripeFee);
@@ -126,6 +126,15 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       }
       charge = await stripe.charges.create(paymentData, {stripe_account: pilot.stripeAccountId});
     }
+
+    console.log("charge: ", JSON.stringify(charge, null, 2));
+
+    // Update transfer object metadata
+    const updateTransfer = await stripe.transfers.update(charge.transfer, {
+      metadata: metaData
+    });
+
+    console.log("updateTransfer: ", JSON.stringify(updateTransfer, null, 2));
 
     // Add the Stripe charge reference to the ride and save it
     ride.stripeChargeId = charge.id;
