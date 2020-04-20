@@ -96,6 +96,8 @@ block footer
               option(value=(applicationFees.value)) #{applicationFees.value}
       <br/>
       input(type='submit', name="immediate_balance", value='Create passenger ride', class='primary-action')
+      button#myBtn(type='button', class='primary-action', data-paymentIntent='12345', data-publishKey='pk_test_4ZXpoVP3gkXxSSfnpzL6E9G400arrENpcP') Create passenger ride with card
+
     <br/>
     h4 Simulate a payment from Platform.
       a.show-more(href="#") &nbsp;(show more)
@@ -108,3 +110,34 @@ block footer
         input(name='pull_amount', value='', type='text')
       <br/>
       input(type='submit', name="pull_funds", value='Pull Funds From Platform', class='primary-action')
+
+    script(src="https://js.stripe.com/v3/")
+    <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="card-content">
+                <form id="payment-form">
+                    <div class="row">
+                        <div class="field">
+                            <label for="first_name">First Name</label>
+                            <input id="first_name" type="text" placeholder="John">
+                        </div>
+                        <div class="field">
+                            <label for="last_name">Last Name</label>
+                            <input id="last_name" type="text" placeholder="Wick">
+                        </div>
+                        <div style="clear: both;"></div>
+                    </div>
+                    <div id="card-element">
+                    <!-- Elements will create input elements here -->
+                    </div>
+
+                    <!-- We'll put the error messages in this element -->
+                    <div id="card-errors" role="alert" style=""></div>
+
+                    <button id="payWithCard" class='primary-action' style="margin-top:10px;">Pay with Card</button>
+                </form>
+            </div>
+        </div>
+    </div>

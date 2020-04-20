@@ -55,7 +55,7 @@ RideSchema.methods.applicationFee = function(country, currency) {
     }
   }
 
-  return parseInt(this.amount*0.08*conversion_buffer);
+  return this.stripeFee(country) + parseInt(this.amount*0.08*conversion_buffer);
 };
 
 const Ride = mongoose.model('Ride', RideSchema);
