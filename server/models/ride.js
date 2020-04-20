@@ -39,6 +39,9 @@ RideSchema.methods.stripeFee = function(country) {
   if(country === 'HK'){
     fixedalue = 2.35;
     perValue = 0.034;
+  } else if(country === 'GB'){
+    fixedalue = 0.2;
+    perValue = 0.029;
   }
   return parseInt(((this.amount*perValue) + fixedalue*100));
 };
