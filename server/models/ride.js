@@ -43,8 +43,19 @@ RideSchema.methods.stripeFee = function(country) {
   return parseInt(((this.amount*perValue) + fixedalue*100));
 };
 
-RideSchema.methods.applicationFee = function() {
-  return parseInt(this.amount*0.2);
+RideSchema.methods.applicationFee = function(country, currency) {
+  let conversion_buffer = 1;
+  if(country === 'HK') {
+    if (currency !== 'HKD') {
+      conversion_buffer = 3
+    }
+  } else if(country === 'GB'){
+    if(currency !== 'GBP'){
+      conversion_buffer = 1.2;
+    }
+  }
+
+  return parseInt(this.amount*0.08*conversion_buffer);
 };
 
 const Ride = mongoose.model('Ride', RideSchema);

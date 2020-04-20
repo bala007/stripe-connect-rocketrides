@@ -108,7 +108,7 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Destination Charge'){
       if (req.body.applicationFees === 'Yes'){
-        paymentData.application_fee_amount = ride.applicationFee();
+        paymentData.application_fee_amount = ride.applicationFee(pilot.country, ride.currency);
         paymentData.transfer_data = {
           // The destination of this charge is the pilot's Stripe account
           destination: pilot.stripeAccountId
