@@ -54,7 +54,7 @@ RideSchema.methods.applicationFee = function(country, currency) {
     }
   } else if(country === 'GB'){
     if(currency !== 'GBP'){
-      conversion_buffer = 1.2;
+      conversion_buffer = 1.5;
     }
   }
 
