@@ -274,6 +274,15 @@ router.post('/signup', async (req, res, next) => {
 });
 
 /**
+ * GET /pilots/webhook
+ *
+ * Simple pilot login.
+ */
+router.get('/webhook', (req, res) => {
+  res.send('OK');
+});
+
+/**
  * GET /pilots/login
  *
  * Simple pilot login.
