@@ -278,7 +278,7 @@ router.post('/signup', async (req, res, next) => {
  *
  * Simple pilot login.
  */
-router.get('/webhook', (req, res) => {
+router.post('/webhook', (req, res) => {
   res.send('OK');
 });
 
