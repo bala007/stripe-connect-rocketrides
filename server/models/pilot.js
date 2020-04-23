@@ -32,6 +32,10 @@ const PilotSchema = new Schema({
 
   // Stripe account ID to send payments obtained with Stripe Connect.
   stripeAccountId: String,
+  connectType: String,
+
+  // Has this pilot been verified by Stripe?
+  stripeVerified: { type: Boolean, default: false }
 });
 
 // Return a pilot name for display.

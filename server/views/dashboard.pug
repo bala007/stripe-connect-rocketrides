@@ -1,21 +1,41 @@
 extends layout
 
 block header
-  if showBanner
-    .banner
-      .message
-        strong Congratulations, your account is set up.
-        span.secondary-text Fire up your rocket and take your first passengers.
+    if pilot.connectType !== 'custom'
+      .banner.verify-complete(class={"showing": showBanner})
+        .message
+          strong Congratulations, your account is set up.
+          | Fire up your rocket and take your first passengers.
+    else
+      .banner.verify-required(class={"showing": !showBanner && !stripeVerified})
+        .message
+          if payoutDisabled
+            strong Payout is disabled.
+            |&nbsp; Add Bank account or debit card to enable it.
+          else
+            strong Your account needs to be verified.
+            |&nbsp; #[a(href="/pilots/stripe/verify") Verify now >]
+      .banner.verify-pending(class={"showing": showBanner && !stripeVerified})
+        .message
+          strong Verifying your account.
+          | This should take just a few minutes.
+      .banner.verify-complete(class={"showing": showBanner && stripeVerified})
+        .message
+          strong Your account has been verified.
+          | Fire up your rocket and take your first passengers.
+
 block content
   - const currencyOptions = [{value: 'USD'}, {value: 'EUR'}, {value: 'GBP'}, {value: 'AUD'}, {value: 'HKD'}]
+  - var name = pilot.displayName().trim() !== '' ? pilot.displayName() : pilot.email;
   .dashboard
     .user
       .block.profile
         .photo
         p Pilot since #{moment(pilot.created).format('MMM YYYY')}
-        h1 #{pilot.displayName()}
-        h2
-          a(href='/pilots/stripe/dashboard?account=true') View Stripe account
+        h1 #{name}
+        if pilot.accountType == 'express'
+            h2
+              a(href='/pilots/stripe/dashboard?account=true') View Stripe account
 
       .block.week
         p This week
@@ -27,10 +47,20 @@ block content
         h2 $#{(balanceAvailable / 100).toFixed(2)} available
       .block.stripe
         form.payout(action='/pilots/stripe/payout', method='POST', autocomplete='off')
-          input(class='primary' type='submit', value='Pay out now' disabled=(balanceAvailable===0))
-        p
-          a(href='/pilots/stripe/dashboard') View payouts on Stripe
-        form.left(action='/pilots/transfer-to-platform', method='POST', autocomplete='off')
+          input(class='primary' type='submit', value='Pay out now' disabled=(balanceAvailable===0 || payoutDisabled))
+        if pilot.connectType == 'custom'
+            if !stripeVerified
+              if stripeVerifiedReason === 'requirements.pending_verification'
+                p#verified Account verification is pending
+              else
+                p#verified
+                  a(href='/pilots/stripe/verify') Verify your account
+            else
+              p#verified Your account is verified
+        if pilot.accountType == 'express'
+            p
+              a(href='/pilots/stripe/dashboard') View payouts on Stripe
+        //- form.left(action='/pilots/transfer-to-platform', method='POST', autocomplete='off')
           p
             | Application Fees:&nbsp;
             input(name='application_fees', value='', type='text')
@@ -40,6 +70,7 @@ block content
                   option(value=(currency.value)) #{currency.value}
           <br/>
           input(type='submit', name="push_funds", value='Pay Application fees to Platform', class='primary-action')
+        //
     section.rides
       h4 Recent rides
       if rides.length == 0
@@ -84,13 +115,13 @@ block footer
               option(value=(currency.value)) #{currency.value}
         <br/>
         label(for='chargeType') Transfer amount:&nbsp;
-          - const chargeTypeOptions = [{value: 'Platform', display: 'Direct to Platform'}, {value: 'Destination Charge', display: 'Destination to Pilot via Platform'}, {value: 'Direct Charge', display: 'Direct to Pilot'}]
+          - const chargeTypeOptions = [{value: 'Destination Charge', display: 'Destination to Pilot via Platform'}, {value: 'Platform', display: 'Direct to Platform'}, {value: 'Direct Charge', display: 'Direct to Pilot'}]
           select#chargeType(name='chargeType' size='1')
             each chargeType in chargeTypeOptions
               option(value=(chargeType.value)) #{chargeType.display}
         <br/>
         label(for='applicationFees') Application Fees:&nbsp;
-          - const applicationFeesOptions = [{value: 'No'}, {value: 'Yes'}]
+          - const applicationFeesOptions = [{value: 'Yes'}, {value: 'No'}]
           select#applicationFees(name='applicationFees' size='1')
             each applicationFees in applicationFeesOptions
               option(value=(applicationFees.value)) #{applicationFees.value}
@@ -98,13 +129,13 @@ block footer
       input(type='submit', name="immediate_balance", value='Create passenger ride', class='primary-action')
       button#myBtn(type='button', class='primary-action', data-paymentIntent='12345', data-publishKey='pk_test_4ZXpoVP3gkXxSSfnpzL6E9G400arrENpcP') Create passenger ride with card
 
-    <br/>
-    h4 Simulate a payment from Platform.
+    //- <br/>
+    //- h4 Simulate a payment from Platform.
       a.show-more(href="#") &nbsp;(show more)
-    .description
+    //-.description
       ol
         li This will help you to pull remaining payments from platform.
-    form.left(action='/pilots/pull-funds', method='POST', autocomplete='off')
+    //-form.left(action='/pilots/pull-funds', method='POST', autocomplete='off')
       p
         | Amount:&nbsp;
         input(name='pull_amount', value='', type='text')

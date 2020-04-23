@@ -141,13 +141,41 @@ h1.title.short-form {
 }
 
 /* Banners */
-.banner {
+/*.banner {
   background: #15b67c;
   color: white;
   width: 100%;
   min-height: 44px;
   line-height: 44px;
 }
+*/
+
+.banner {
+    background: #F8BF25;
+    color: white;
+    width: 100%;
+    min-height: 44px;
+    line-height: 44px;
+    text-shadow: 0px 1px 3px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.banner.showing {
+    display: block;
+}
+
+.banner.verify-required {
+    background: #f57d7d;
+}
+
+.banner.verify-pending {
+    background: #F8BF25;
+}
+
+.banner.verify-complete {
+    background: #15b67c;
+}
+
 .message {
   max-width: 800px;
   margin: 0 auto;

@@ -18,6 +18,51 @@ function pilotRequired(req, res, next) {
   next();
 }
 
+// Check if the pilot is verified with Stripe
+async function isStripeVerified(pilot) {
+  // Check we've already recorded this pilot as verified
+  if (pilot.stripeVerified) {
+    return {verified: true}
+  }
+  // Check Stripe to see if the pilot's account has been verified
+  const stripeAccount = await stripe.accounts.retrieve(pilot.stripeAccountId);
+
+  console.log("stripeAccount => ", JSON.stringify(stripeAccount, null, 2));
+
+  let payoutDisabled = stripeAccount.requirements.currently_due.includes('external_account');
+
+  // Check if this account is disabled due to verification requirements
+  if (!stripeAccount.details_submitted) {
+    return {verified: false, payoutDisabled: payoutDisabled};
+  }
+  if (stripeAccount.requirements.disabled_reason) {
+    return {verified: false, payoutDisabled: payoutDisabled, reason: stripeAccount.requirements.disabled_reason};
+  } else {
+    // Pilot is verified, update and save the model
+    pilot.set({stripeVerified: true});
+    await pilot.save();
+    return {verified: true};
+  };
+
+}
+
+/**
+ * GET /pilots/verified
+ *
+ * Checks whether Stripe has verified this pilot
+ */
+router.get('/verified', pilotRequired, async(req, res) => {
+  const pilot = req.user;
+  // Get the pilot's verified status on Stripe
+  const stripeVerified = await isStripeVerified(pilot);
+
+  res.send({
+    stripeVerified: stripeVerified.verified,
+    payoutDisabled: stripeVerified.payoutDisabled,
+    stripeVerifiedReason: stripeVerified.reason || null,
+  });
+});
+
 /**
  * GET /pilots/dashboard
  *
@@ -47,6 +92,13 @@ router.get('/dashboard', pilotRequired, async (req, res) => {
     return a + b.amountForPilot(pilot.country);
   }, 0);
   const [showBanner] = req.flash('showBanner');
+
+  // Get the pilot's verified status on Stripe
+  const stripeVerified = await isStripeVerified(pilot);
+
+  console.log("stripeVerified => ", stripeVerified);
+  console.log("pilot => ", JSON.stringify(pilot, null, 2));
+
   // There is one balance for each currencies used: as this
   // demo app only uses USD we'll just use the first object
   res.render('dashboard', {
@@ -56,6 +108,10 @@ router.get('/dashboard', pilotRequired, async (req, res) => {
     ridesTotalAmount: ridesTotalAmount,
     rides: rides,
     showBanner: !!showBanner || req.query.showBanner,
+    stripeVerified: stripeVerified.verified,
+    payoutDisabled: stripeVerified.payoutDisabled,
+    stripeVerifiedReason: stripeVerified.reason || null
+
   });
 });
 
@@ -209,6 +265,8 @@ router.post('/transfer-to-platform', pilotRequired, async (req, res, next) => {
  */
 router.get('/signup', (req, res) => {
   let step = 'account';
+
+  console.log("pilot => ", JSON.stringify(req.user, null, 2));
   // Naive way to identify which step we're on: check for the presence of user profile data
   if (req.user) {
     if (
@@ -260,10 +318,13 @@ router.post('/signup', async (req, res, next) => {
     try {
       // Try to update the logged-in pilot using the newly entered profile data
       pilot.set(body);
+
+      let connectType = getConnectType(body.connectType);
+      pilot.connectType = connectType;
       await pilot.save();
 
       if(body.connectType){
-        return res.redirect(`/pilots/stripe/authorize?connectType=${getConnectType(body.connectType)}`);
+        return res.redirect(`/pilots/stripe/authorize?connectType=${connectType}`);
       } else {
         return res.redirect('/');
       }
@@ -371,8 +432,10 @@ function getRandomInt(min, max) {
 function getConnectType(str){
   if(str === 'Save and Express Connect'){
     return 'express';
-  } else {
+  } else if (str === 'Save and Standard Connect') {
     return 'standard';
+  } else {
+    return 'custom';
   }
 }
 

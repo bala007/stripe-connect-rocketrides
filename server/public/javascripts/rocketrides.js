@@ -102,7 +102,9 @@ var payWithCard = function(paymentIntent){
       color: '#FFC7EE',
     },
   };
-  var card = elements.create("card", { style: style2 });
+  // var card = elements.create("card", { style: style2 });
+  // var card = elements.create("fpxBank", { accountHolderType: 'individual' });
+  var card = elements.create("idealBank");
 
   card.on('change', function(event) {
     $('#card-errors').text('');
