@@ -5,24 +5,20 @@ block header
       .banner.verify-complete(class={"showing": showBanner})
         .message
           strong Congratulations, your account is set up.
-          | Fire up your rocket and take your first passengers.
+          |&nbsp; Fire up your rocket and take your first passengers.
     else
       .banner.verify-required(class={"showing": !showBanner && !stripeVerified})
         .message
-          if payoutDisabled
-            strong Payout is disabled.
-            |&nbsp; Add Bank account or debit card to enable it.
-          else
-            strong Your account needs to be verified.
-            |&nbsp; #[a(href="/pilots/stripe/verify") Verify now >]
+          strong Your account needs to be verified.
+          |&nbsp; #[a(href="/pilots/stripe/verify") Verify now >]
       .banner.verify-pending(class={"showing": showBanner && !stripeVerified})
         .message
           strong Verifying your account.
-          | This should take just a few minutes.
+          |&nbsp; This should take just a few minutes.
       .banner.verify-complete(class={"showing": showBanner && stripeVerified})
         .message
           strong Your account has been verified.
-          | Fire up your rocket and take your first passengers.
+          |&nbsp; Fire up your rocket and take your first passengers.
 
 block content
   - const currencyOptions = [{value: 'USD'}, {value: 'EUR'}, {value: 'GBP'}, {value: 'AUD'}, {value: 'HKD'}]
@@ -56,7 +52,11 @@ block content
                 p#verified
                   a(href='/pilots/stripe/verify') Verify your account
             else
-              p#verified Your account is verified
+              if payoutDisabled
+                p#verified Verified but Payout is disabled
+                  a#bankLink(href='javascript:void(0);', data-publish-key=(stripePublishableKey)) &nbsp;Add Bank account
+              else
+                p#verified You are all set!
         if pilot.accountType == 'express'
             p
               a(href='/pilots/stripe/dashboard') View payouts on Stripe
@@ -126,8 +126,8 @@ block footer
             each applicationFees in applicationFeesOptions
               option(value=(applicationFees.value)) #{applicationFees.value}
       <br/>
-      input(type='submit', name="immediate_balance", value='Create passenger ride', class='primary-action')
-      button#myBtn(type='button', class='primary-action', data-paymentIntent='12345', data-publishKey='pk_test_4ZXpoVP3gkXxSSfnpzL6E9G400arrENpcP') Create passenger ride with card
+      input#createPassengerRide(type='submit', name="immediate_balance", value='Create passenger ride', class='primary-action', disabled=(!stripeVerified))
+      button#myBtn(type='button', class='primary-action', data-payment-intent='12345', data-publish-key=(stripePublishableKey), disabled=(!stripeVerified)) Create passenger ride with card
 
     //- <br/>
     //- h4 Simulate a payment from Platform.
@@ -147,7 +147,7 @@ block footer
         <!-- Modal content -->
         <div class="modal-content">
             <span class="close">&times;</span>
-            <div class="card-content">
+            <div id="mainContent" class="card-content">
                 <form id="payment-form">
                     <div class="row">
                         <div class="field">
@@ -172,3 +172,67 @@ block footer
             </div>
         </div>
     </div>
+    <div id="bankFormMarkup" style="display:none;">
+        <form id="bankForm">
+            <div class="row">
+                <div class="field">
+                    <label for="account_holder_name">Account holder name</label>
+                    <input name="account_holder_name" type="text" placeholder="John Wick">
+                </div>
+                <div class="field">
+                    <label for="account_holder_type">Account holder type</label>
+                    <input name="account_holder_type" type="text" value="individual">
+                </div>
+                <div class="field">
+                    <label for="routing_number">Routing Number</label>
+                    <input name="routing_number" type="text" placeholder="11000000000">
+                </div>
+                <div class="field">
+                    <label for="account_number">Account Number</label>
+                    <input name="account_number" type="text" placeholder="0000000000">
+                </div>
+                <div style="clear: both;"></div>
+                input(type='hidden', name='account_id', value=(pilot.stripeAccountId))
+                input(type='hidden', name='country', value=(pilot.country))
+                input(type='hidden', name='currency', value='usd')
+            </div>
+
+            <input type="submit" class='primary-action' value="Add bank account" style="margin-top:10px;">
+        </form>
+    </div>
+    script.
+        let pilotVerified = "#{stripeVerified}" !== "false";
+
+        // Poll the server to see if the pilot is verified
+        let repeatCheckVerification;
+        if (!pilotVerified) {
+          repeatCheckVerification = setInterval(checkVerification, 3000);
+        }
+
+        // Check the pilot's verification status on the server
+        async function checkVerification() {
+          try {
+            const response = await fetch('/pilots/verified');
+            const isVerified = await response.json();
+
+            // If they're succesfully verified via Connect Onboarding, stop polling
+            if (isVerified.stripeVerified) {
+              clearInterval(repeatCheckVerification);
+              verifiedPilot();
+            }
+          } catch (e) {
+            console.log('Error while checking if pilot is verified:', e)
+          }
+        }
+
+        function verifiedPilot() {
+          console.log('This pilot is verified.');
+          // Update the Dashboard to show the pilot is now verified
+          document.getElementById('verified').textContent = 'Your account is verified';
+          document.getElementById('createPassengerRide').disabled = false;
+          document.getElementById('myBtn').disabled = false;
+          // Update the banner to show that verification has succeeded
+          document.querySelectorAll('.banner')
+            .forEach(banner => banner.classList.remove('showing'));
+          document.querySelector('.banner.verify-complete').classList.add('showing');
+        }

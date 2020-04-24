@@ -288,6 +288,13 @@ footer {
   color: #fff;
 }
 
+.annotation.card input[type='submit'].primary-action:disabled,
+.annotation.card button.primary-action:disabled {
+    background: #e6ebf1;
+    color: #aab7c4;
+    cursor: default;
+}
+
 .annotation.card.hidden {
   display: none;
 }

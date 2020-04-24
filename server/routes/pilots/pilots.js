@@ -30,13 +30,14 @@ async function isStripeVerified(pilot) {
   console.log("stripeAccount => ", JSON.stringify(stripeAccount, null, 2));
 
   let payoutDisabled = stripeAccount.requirements.currently_due.includes('external_account');
+  let onlyPayoutDisabled = (payoutDisabled && stripeAccount.requirements.currently_due.length === 1);
 
   // Check if this account is disabled due to verification requirements
   if (!stripeAccount.details_submitted) {
-    return {verified: false, payoutDisabled: payoutDisabled};
+    return {verified: onlyPayoutDisabled, payoutDisabled: payoutDisabled};
   }
   if (stripeAccount.requirements.disabled_reason) {
-    return {verified: false, payoutDisabled: payoutDisabled, reason: stripeAccount.requirements.disabled_reason};
+    return {verified: onlyPayoutDisabled, payoutDisabled: payoutDisabled, reason: stripeAccount.requirements.disabled_reason};
   } else {
     // Pilot is verified, update and save the model
     pilot.set({stripeVerified: true});
@@ -110,7 +111,8 @@ router.get('/dashboard', pilotRequired, async (req, res) => {
     showBanner: !!showBanner || req.query.showBanner,
     stripeVerified: stripeVerified.verified,
     payoutDisabled: stripeVerified.payoutDisabled,
-    stripeVerifiedReason: stripeVerified.reason || null
+    stripeVerifiedReason: stripeVerified.reason || null,
+    stripePublishableKey: config.stripe.publishableKey
 
   });
 });

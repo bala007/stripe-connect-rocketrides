@@ -48,11 +48,11 @@ var modal = $("#myModal"),
 // When the user clicks on the button, open the modal
 $("#myBtn").click(function () {
   modal.show();
-  var paymentIntent = $(this).attr('data-paymentIntent');
-  var publishKey = $(this).attr('data-publishKey');
+  var paymentIntent = $(this).attr('data-payment-intent');
+  var publishKey = $(this).attr('data-publish-key');
   console.log("paymentIntent: ", paymentIntent);
   console.log("publishKey: ", publishKey);
-  payWithCard(paymentIntent);
+  payWithCard(publishKey);
 });
 
 // When the user clicks on <span> (x), close the modal
@@ -68,13 +68,13 @@ window.onclick = function(event) {
 };
 
 
-var payWithCard = function(paymentIntent){
+var payWithCard = function(publishKey){
 
   var payButton = $('#payWithCard');
 
   payButton.prop( "disabled", true );
 
-  var stripe = Stripe('pk_test_4ZXpoVP3gkXxSSfnpzL6E9G400arrENpcP');
+  var stripe = Stripe(publishKey);
   var elements = stripe.elements();
   var style = {
     base: {
@@ -139,3 +139,45 @@ var sendRequest = function (url, data) {
       console.log('always: ', data, error);
     });
 };
+
+async function handleForm(event) {
+  event.preventDefault();
+
+  const stripe = Stripe(stripePublishKey);
+
+  var values = {};
+  $.each($(this).serializeArray(), function(i, field) {
+    values[field.name] = field.value;
+  });
+
+  console.log("values => ", values);
+
+  stripe
+    .createToken('bank_account', {
+      country: 'SG',//values.country,
+      currency: 'SGD',//values.currency,
+      routing_number: values.routing_number,
+      account_number: values.account_number,
+      account_holder_name: values.account_holder_name,
+      account_holder_type: values.account_holder_type,
+    })
+    .then(function(result) {
+      console.log("result => ", result);
+    });
+
+}
+
+var stripePublishKey = null;
+
+$("#bankLink").click(function () {
+
+  $('#mainContent').html($("#bankFormMarkup").html());
+  modal.show();
+
+  $('#bankForm').submit(handleForm);
+
+  stripePublishKey = $(this).attr('data-publish-key');
+
+  console.log("stripePublishKey: ", stripePublishKey);
+
+});
