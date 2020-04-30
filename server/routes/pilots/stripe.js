@@ -41,6 +41,7 @@ async function createStripeAccount(pilot, type, ipAddress) {
         }
       },
       country: pilot.country,
+      default_currency: pilot.currency,
       email: pilot.email,
       // Assign a debit card to the Custom account as a payment method:
       // we use a test token for simplicity in this demo.
@@ -187,7 +188,7 @@ router.get('/verify', pilotRequired, async (req, res) => {
       success_url: config.publicDomain + '/pilots/dashboard?showBanner=true',
       // In the case of a failure, e.g. the link expired or the account was rejected,
       // redirect the user to this URL to refresh the Account Link.
-      failure_url: config.publicDomain + '/pilots/verify'
+      failure_url: config.publicDomain + '/pilots/dashboard'
     });
     // Redirect to Stripe to start the Connect Onboarding flow.
     res.redirect(accountLink.url);

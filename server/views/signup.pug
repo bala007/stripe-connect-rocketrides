@@ -71,6 +71,11 @@ block content
                 option(value='CH') Switzerland
                 option(value='GB') United Kingdom
                 option(value='US', selected=true) United States
+            .row.select(label='Currency')
+              select(name='currency')
+                option(value='') --
+                option(value='usd') USD
+                option(value='cad') CAD
           aside * Indicates required fields
           h4 Rocket information
           fieldset

@@ -90,7 +90,7 @@ router.get('/dashboard', pilotRequired, async (req, res) => {
   // Fetch the pilot's recent rides
   const rides = await pilot.listRecentRides();
   const ridesTotalAmount = rides.reduce((a, b) => {
-    return a + b.amountForPilot(pilot.country);
+    return a + b.amountForPilot(pilot.currency);
   }, 0);
   const [showBanner] = req.flash('showBanner');
 
@@ -135,6 +135,10 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
     currency: req.body.currency,
     chargeType: req.body.chargeType
   });
+
+  let accDetails = await stripe.accounts.retrieve(pilot.stripeAccountId);
+  let destinationCurrency = accDetails.default_currency;
+
   try {
     // Get a test source, using the given testing behavior
     let source;
@@ -145,11 +149,10 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
     }
 
     let meetlyFees = ride.meetlyFee();
-    let stripeFee = ride.stripeFee(pilot.country);
-    let metaData = {"Meetly Fee": `${meetlyFees/100}`, "Stripe Fee": `${stripeFee/100}`};
+    let initialApplicationFee = ride.initialApplicationFee(destinationCurrency);
 
     console.log("meetlyFees: ", meetlyFees);
-    console.log("stripeFee: ", stripeFee);
+    console.log("initialApplicationFee: ", initialApplicationFee);
     console.log("pilot: ", pilot);
 
 
@@ -158,15 +161,14 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       amount: ride.amount,
       currency: ride.currency,
       description: config.appName,
-      statement_descriptor: config.appName,
-      metadata: metaData
+      statement_descriptor: config.appName
     };
     let charge = null;
     if (req.body.chargeType === 'Platform') {
       charge = await stripe.charges.create(paymentData);
     } else if (req.body.chargeType === 'Destination Charge'){
       if (req.body.applicationFees === 'Yes'){
-        paymentData.application_fee_amount = ride.applicationFee(pilot.country, ride.currency);
+        paymentData.application_fee_amount = initialApplicationFee;
         paymentData.transfer_data = {
           // The destination of this charge is the pilot's Stripe account
           destination: pilot.stripeAccountId
@@ -177,7 +179,7 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
         paymentData.transfer_data = {
           // Send the amount for the pilot after collecting a 20% platform fee:
           // the `amountForPilot` method simply computes `ride.amount * 0.8`
-          amount: ride.amountForPilot(pilot.country),
+          amount: ride.amount,
           // The destination of this charge is the pilot's Stripe account
           destination: pilot.stripeAccountId
 
@@ -192,19 +194,71 @@ router.post('/rides', pilotRequired, async (req, res, next) => {
       charge = await stripe.charges.create(paymentData, {stripe_account: pilot.stripeAccountId});
     }
 
-    console.log("charge: ", JSON.stringify(charge, null, 2));
+    console.log("charge => ", JSON.stringify(charge, null, 2));
 
-    // Update transfer object metadata
-    const updateTransfer = await stripe.transfers.update(charge.transfer, {
-      metadata: metaData
-    });
+    // Adjust application fee if presentment currency and destination currency are not same
+    let chargeBalanceTransaction = await stripe.balanceTransactions.retrieve(charge.balance_transaction);
+    let stripeFee =  chargeBalanceTransaction.fee;
+    let exchangeRate = chargeBalanceTransaction.exchange_rate;
+    let convertedAmount = chargeBalanceTransaction.amount;
+    let applicationFee = Math.round(convertedAmount*0.08);
 
-    console.log("updateTransfer: ", JSON.stringify(updateTransfer, null, 2));
+    console.log("exchangeRate => ", exchangeRate);
+    console.log("stripeFee => ", stripeFee);
+    console.log("applicationFee => ", applicationFee);
+
+    console.log("chargeBalanceTransaction => ", chargeBalanceTransaction);
+
+    // Get converted initialApplicationFee
+    if(charge.application_fee){
+      let applicationFeeObj = await stripe.applicationFees.retrieve(charge.application_fee);
+      console.log("applicationFeeObj => ", applicationFeeObj);
+      let balanceTransactionObj = await stripe.balanceTransactions.retrieve(applicationFeeObj.balance_transaction);
+      console.log("application fee balanceTransactionObj => ", balanceTransactionObj);
+      let convertedApplicationFee = balanceTransactionObj.amount;
+
+      let applicationFeeRefundAmount = convertedApplicationFee - (stripeFee+applicationFee);
+      console.log(`applicationFeeRefundAmount => ${convertedApplicationFee} - (${stripeFee}+${applicationFee})`);
+      if(applicationFeeRefundAmount > 0){
+        let applicationFeeRefundAmountInOriginal = Math.round(applicationFeeRefundAmount/exchangeRate);
+
+        console.log("convertedApplicationFee => ", convertedApplicationFee);
+        console.log("applicationFeeRefundAmount => ", applicationFeeRefundAmount);
+        console.log("applicationFeeRefundAmountInOriginal => ", applicationFeeRefundAmountInOriginal);
+
+        let metadata = {
+          applicationFeeRefundAmount: applicationFeeRefundAmount,
+          applicationFeeRefundAmountInOriginal: applicationFeeRefundAmountInOriginal
+        };
+        // let refundResp = await stripe.applicationFees.createRefund(charge.application_fee, {amount: applicationFeeRefundAmountInOriginal, metadata: metadata});
+        //
+        // console.log("refundResp => ", refundResp);
+        // let refundRespBalanceTransaction = await stripe.balanceTransactions.retrieve(refundResp.balance_transaction);
+        // console.log("refundRespBalanceTransaction => ", refundRespBalanceTransaction);
+
+        // Update transfer object metadata
+        const updateTransfer = await stripe.transfers.update(charge.transfer, {
+          metadata: Object.assign(metadata, {stripeFee: stripeFee})
+        });
+
+        // console.log("updateTransfer => ", JSON.stringify(updateTransfer, null, 2));
+
+      }
+    } else {
+      let revertAmount = (applicationFee + stripeFee);
+      let transferReversal = await stripe.transfers.createReversal(charge.transfer, {amount: revertAmount});
+      console.log("transferReversal => ", transferReversal);
+    }
+
+    console.log("\n\n**************************\n\n");
 
     // Add the Stripe charge reference to the ride and save it
     ride.stripeChargeId = charge.id;
     // Save the ride
     await ride.save();
+
+    console.log("ride => ", ride);
+
   } catch (err) {
     console.log(err);
     // Return a 402 Payment Required error code

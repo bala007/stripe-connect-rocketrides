@@ -57,6 +57,8 @@ block content
                   a#bankLink(href='javascript:void(0);', data-publish-key=(stripePublishableKey)) &nbsp;Add Bank account
               else
                 p#verified You are all set!
+              p#verified2
+                a(href='/pilots/stripe/verify') Verify your account
         if pilot.accountType == 'express'
             p
               a(href='/pilots/stripe/dashboard') View payouts on Stripe

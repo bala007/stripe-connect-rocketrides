@@ -22,7 +22,13 @@ module.exports = {
     clientId: process.env.DS_STRIPE_CLIENT_ID,
     authorizeUri: 'https://connect.stripe.com/express/oauth/authorize',
     authorizeUriStandard: 'https://connect.stripe.com/oauth/authorize',
-    tokenUri: 'https://connect.stripe.com/oauth/token'
+    tokenUri: 'https://connect.stripe.com/oauth/token',
+
+    de: {
+      secretKey: process.env.DS_DE_STRIPE_SECRET_KEY,
+      publishableKey: process.env.DS_DE_STRIPE_PUBLISHABLE_KEY,
+      clientId: process.env.DS_DE_STRIPE_CLIENT_ID
+    }
   },
 
   // Configuration for MongoDB

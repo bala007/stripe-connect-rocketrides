@@ -22,6 +22,7 @@ const PilotSchema = new Schema({
   city: String,
   state: { type: String}, 
   country: { type: String, default: 'US' },
+  currency: { type: String },
   created: { type: Date, default: Date.now },
   rocket: {
     model: String,

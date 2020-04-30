@@ -154,8 +154,8 @@ async function handleForm(event) {
 
   stripe
     .createToken('bank_account', {
-      country: 'SG',//values.country,
-      currency: 'SGD',//values.currency,
+      country: 'US',//values.country,
+      currency: 'usd',//values.currency,
       routing_number: values.routing_number,
       account_number: values.account_number,
       account_holder_name: values.account_holder_name,

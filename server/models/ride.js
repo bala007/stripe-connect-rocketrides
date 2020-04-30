@@ -24,8 +24,8 @@ const RideSchema = new Schema({
 });
 
 // Return the ride amount for the pilot after collecting 20% platform fees.
-RideSchema.methods.amountForPilot = function(country) {
-  return parseInt(this.amount - this.meetlyFee() - this.stripeFee(country));
+RideSchema.methods.amountForPilot = function(currency) {
+  return parseInt(this.amount - this.initialApplicationFee(currency));
 };
 
 // Return the ride amount for the pilot after collecting 20% platform fees.
@@ -59,6 +59,33 @@ RideSchema.methods.applicationFee = function(country, currency) {
   }
 
   return this.stripeFee(country) + parseInt(this.amount*0.08*conversion_buffer);
+};
+
+RideSchema.methods.initialApplicationFee = function(currency) {
+
+
+  let presentmentCurrency = this.currency.toLowerCase();
+  let destinationCurrency;
+  if(currency){
+    destinationCurrency = currency.toLowerCase();
+  }
+
+  // if(presentmentCurrency !== destinationCurrency){
+  //   return this.amount*0.5;
+  // } else {
+    let fixedalue = 0.3;
+    let perValue = 0.029;
+    if(destinationCurrency === 'eur'){
+      fixedalue = 0.25;
+      perValue = 0.029;
+    } else if (destinationCurrency === 'hkd'){
+      fixedalue = 2.35;
+      perValue = 0.034;
+    }
+
+    return parseInt(this.amount*0.08) + parseInt(((this.amount*perValue) + fixedalue*100));
+  // }
+
 };
 
 const Ride = mongoose.model('Ride', RideSchema);
